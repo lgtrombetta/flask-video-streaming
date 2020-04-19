@@ -3,25 +3,19 @@ from importlib import import_module
 import os
 from flask import Flask, render_template, Response
 
-import signal, sys
 from shlex import split
 from subprocess import Popen, PIPE, DEVNULL
 
-# start gphoto2 and ffmpeg for the DSRL, handle SIGINT
-def signal_handler(sig, frame):
-	print('You pressed Ctrl+C!')
-	print(pid)
-	os.kill(pid, signal.SIGINT)
-	sys.exit()
+class DSLR:
+    def __init__(self):
+	self.p1 = Popen(split("gphoto2 --stdout --capture-movie"), stdout=PIPE, stderr=DEVNULL)
+	self.p2 = Popen(split("ffmpeg -i - -vcodec rawvideo -pix_fmt yuv420p -threads 0 -f v4l2 /dev/video0"), stdin=self.p1.stdout, stdout=DEVNULL, stderr=DEVNULL)
+
+    def pid(self):
+	return self.p1.pid
 
 
-p1 = Popen(split("gphoto2 --stdout --capture-movie"), stdout=PIPE, stderr=DEVNULL)
-p2 = Popen(split("ffmpeg -i - -vcodec rawvideo -pix_fmt yuv420p -threads 0 -f v4l2 /dev/video0"), stdin=p1.stdout, stdout=DEVNULL, stderr=DEVNULL)
-
-global pid
-pid = p1.pid
-
-signal.signal(signal.SIGINT, signal_handler)
+cam = DSLR()
 
 
 # import camera driver
